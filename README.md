@@ -22,8 +22,8 @@ Number Snap is a simple and engaging number-based Match-3 game built using Next.
 
 1. Clone the repository:
    ```bash
-   git clone https://github.com/your-username/number-snap.git
-   cd number-snap
+   git clone https://github.com/riyadhuddin/num3er.git
+   cd num3er 
    ```
 
 2. Install dependencies:
@@ -64,8 +64,7 @@ number-snap/
 ├── src/
 │   ├── app/
 │   │   └── page.tsx   # Main game component
-│   └── styles/
-│       └── game.module.css # Custom styles (if needed)
+│   └── └── game.module.css # Custom styles (if needed)
 ├── public/     # Static assets
 ├── devcycle.js # DevCycle integration
 └── README.md  # Project documentation
