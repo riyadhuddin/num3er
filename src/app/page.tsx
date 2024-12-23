@@ -17,7 +17,7 @@ const TILE_COLORS = ["bg-green-300", "bg-blue-300", "bg-cyan-300", "bg-orange-30
 const generateUserId = () => uuidv4();
 
 (async () => {
-  const devCycleProvider = new DevCycleProvider("dvc_client_bdf76c5e_cab4_406c_9578_38ae2e0ed1a4_0c14775");
+  const devCycleProvider = new DevCycleProvider("dvc_key");
   await OpenFeature.setProviderAndWait(devCycleProvider);
 
   // Set the generated user ID in the OpenFeature context
