@@ -1,51 +1,20 @@
 "use client";
-import { useState, useEffect } from "react";
-import { v4 as uuidv4 } from "uuid"; // Importing uuid
-import {
-  OpenFeatureProvider,
-  useBooleanFlagValue,
-  OpenFeature,
-} from "@openfeature/react-sdk";
-import DevCycleProvider from "@devcycle/openfeature-web-provider";
+import { useState, useEffect } from 'react';
 
-const GRID_SIZE = 6;
+const GRID_SIZE = 6; // 6x6 grid
 const NUMBERS = [1, 2, 3, 4, 5, 6, 7, 8, 9];
-const LEVEL_THRESHOLDS = [50, 100, 200, 300];
+const LEVEL_THRESHOLDS = [50, 100, 200, 300]; // Milestones for leveling up
 const TILE_COLORS = ["bg-green-300", "bg-blue-300", "bg-cyan-300", "bg-orange-300", "bg-pink-300"];
 
-// Generate a unique user ID for each session
-const generateUserId = () => uuidv4();
-
-(async () => {
-  const devCycleProvider = new DevCycleProvider("dvc_key");
-  await OpenFeature.setProviderAndWait(devCycleProvider);
-
-  // Set the generated user ID in the OpenFeature context
-  const userId = generateUserId();
-  await OpenFeature.setContext({
-    user_id: userId, // Use a unique identifier for the public user
-  });
-})();
-
-const App = () => {
-  return (
-    <OpenFeatureProvider>
-      <NumberMatch3Game />
-    </OpenFeatureProvider>
-  );
-};
-
-const NumberMatch3Game = () => {
+export default function NumberMatch3Game() {
   const [grid, setGrid] = useState([]);
-  const [selected, setSelected] = useState(null);
+  const [selected, setSelected] = useState(null); // Track selected tile
   const [score, setScore] = useState(0);
-  const [gameStarted, setGameStarted] = useState(false);
-  const [gameOver, setGameOver] = useState(false);
-  const [level, setLevel] = useState(0);
+  const [gameStarted, setGameStarted] = useState(false); // Track game state
+  const [gameOver, setGameOver] = useState(false); // Track "Game Over" state
+  const [level, setLevel] = useState(0); // Track current level
 
-  // Use the DevCycle feature flag
-  const newYearMessage = useBooleanFlagValue("new-year-message", false);
-
+  // Initialize the grid with random numbers
   const initializeGrid = () => {
     const newGrid = Array.from({ length: GRID_SIZE }, () =>
       Array.from({ length: GRID_SIZE }, () => NUMBERS[Math.floor(Math.random() * NUMBERS.length)])
@@ -55,7 +24,7 @@ const NumberMatch3Game = () => {
 
   const startGame = () => {
     setScore(0);
-    setLevel(0);
+    setLevel(0); // Reset level to 0 when starting the game
     setSelected(null);
     setGameStarted(true);
     setGameOver(false);
@@ -65,21 +34,25 @@ const NumberMatch3Game = () => {
   const resetGame = () => {
     setScore(0);
     setSelected(null);
-    setLevel(0);
+    setLevel(0); // Reset level to 0 when resetting the game
     setGameOver(false);
     initializeGrid();
   };
 
+  // Swap two tiles
   const swapTiles = (x1, y1, x2, y2) => {
     const newGrid = grid.map((row) => [...row]);
     [newGrid[x1][y1], newGrid[x2][y2]] = [newGrid[x2][y2], newGrid[x1][y1]];
     setGrid(newGrid);
 
+    // Check for matches after the swap
     if (!checkMatches(newGrid)) {
+      // If no match, revert the swap and apply penalty
       setTimeout(() => {
         [newGrid[x1][y1], newGrid[x2][y2]] = [newGrid[x2][y2], newGrid[x1][y1]];
         setGrid(newGrid);
       }, 300);
+
       setScore((prev) => {
         const newScore = Math.max(0, prev - 5);
         if (newScore < 0) {
@@ -91,10 +64,12 @@ const NumberMatch3Game = () => {
     }
   };
 
+  // Check for matches including diagonal matches
   const checkMatches = (currentGrid) => {
     let matched = false;
     const newGrid = currentGrid.map((row) => [...row]);
 
+    // Check rows for matches
     for (let i = 0; i < GRID_SIZE; i++) {
       for (let j = 0; j < GRID_SIZE - 2; j++) {
         if (
@@ -115,6 +90,7 @@ const NumberMatch3Game = () => {
       }
     }
 
+    // Check columns for matches
     for (let j = 0; j < GRID_SIZE; j++) {
       for (let i = 0; i < GRID_SIZE - 2; i++) {
         if (
@@ -135,6 +111,49 @@ const NumberMatch3Game = () => {
       }
     }
 
+    // Check diagonals for matches (top-left to bottom-right)
+    for (let i = 0; i < GRID_SIZE - 2; i++) {
+      for (let j = 0; j < GRID_SIZE - 2; j++) {
+        if (
+          newGrid[i][j] &&
+          newGrid[i][j] === newGrid[i + 1][j + 1] &&
+          newGrid[i][j] === newGrid[i + 2][j + 2]
+        ) {
+          newGrid[i][j] = newGrid[i + 1][j + 1] = newGrid[i + 2][j + 2] = null;
+          setScore((prev) => {
+            const newScore = prev + 10;
+            if (LEVEL_THRESHOLDS[level] && newScore >= LEVEL_THRESHOLDS[level]) {
+              levelUp();
+            }
+            return newScore;
+          });
+          matched = true;
+        }
+      }
+    }
+
+    // Check diagonals for matches (top-right to bottom-left)
+    for (let i = 0; i < GRID_SIZE - 2; i++) {
+      for (let j = 2; j < GRID_SIZE; j++) {
+        if (
+          newGrid[i][j] &&
+          newGrid[i][j] === newGrid[i + 1][j - 1] &&
+          newGrid[i][j] === newGrid[i + 2][j - 2]
+        ) {
+          newGrid[i][j] = newGrid[i + 1][j - 1] = newGrid[i + 2][j - 2] = null;
+          setScore((prev) => {
+            const newScore = prev + 10;
+            if (LEVEL_THRESHOLDS[level] && newScore >= LEVEL_THRESHOLDS[level]) {
+              levelUp();
+            }
+            return newScore;
+          });
+          matched = true;
+        }
+      }
+    }
+
+    // Fill null spaces with new numbers
     if (matched) {
       for (let j = 0; j < GRID_SIZE; j++) {
         for (let i = GRID_SIZE - 1; i >= 0; i--) {
@@ -144,17 +163,19 @@ const NumberMatch3Game = () => {
         }
       }
       setGrid(newGrid);
-      setTimeout(() => checkMatches(newGrid), 500);
+      setTimeout(() => checkMatches(newGrid), 500); // Re-check for cascading matches
     }
 
-    return matched;
+    return matched; // Return whether a match was found
   };
 
   const levelUp = () => {
-    setLevel((prev) => prev + 1);
-    setScore(0);
+    // Increment level and reset it to 0 after reaching 4
+    setLevel((prev) => (prev + 1) % 5);
+    setScore(0); // Reset score for the new level
   };
 
+  // Handle tile click
   const handleTileClick = (x, y) => {
     if (!selected) {
       setSelected({ x, y });
@@ -162,7 +183,12 @@ const NumberMatch3Game = () => {
       const dx = Math.abs(selected.x - x);
       const dy = Math.abs(selected.y - y);
 
-      if ((dx === 1 && dy === 0) || (dx === 0 && dy === 1)) {
+      // Only allow swapping adjacent tiles, including diagonals
+      if (
+        (dx === 1 && dy === 0) ||  // Horizontal swap
+        (dx === 0 && dy === 1) ||  // Vertical swap
+        (dx === 1 && dy === 1)     // Diagonal swap
+      ) {
         swapTiles(selected.x, selected.y, x, y);
       }
       setSelected(null);
@@ -172,11 +198,6 @@ const NumberMatch3Game = () => {
   return (
     <div className="flex flex-col items-center p-8">
       <h1 className="text-3xl font-bold mb-4">Number Snap Game</h1>
-      {newYearMessage && (
-        <p className="text-xl mb-4 text-green-600 font-bold">
-          🎉 Happy New Year! 🎉
-        </p>
-      )}
       {!gameStarted && !gameOver && (
         <button
           onClick={startGame}
@@ -198,7 +219,7 @@ const NumberMatch3Game = () => {
       )}
       {gameStarted && !gameOver && (
         <>
-          <p className="text-xl mb-2">Level: <span className="font-semibold">{level + 1}</span></p>
+          <p className="text-xl mb-2">Level: <span className="font-semibold">{level}</span></p>
           <p className="text-xl mb-4">Score: <span className="font-semibold">{score}</span></p>
           <button
             onClick={resetGame}
@@ -227,6 +248,4 @@ const NumberMatch3Game = () => {
       )}
     </div>
   );
-};
-
-export default App;
+}
